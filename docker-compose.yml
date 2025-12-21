@@ -1,0 +1,79 @@
+name: docker-dns-test
+
+# ==============================================================================
+# REPRODUCTION CASE: Docker Desktop DNS Resolution Failure
+# ==============================================================================
+# This docker-compose.yml demonstrates a DNS resolution bug in Docker Desktop
+# where service names cannot be resolved on custom bridge networks.
+#
+# Expected: Containers should resolve "dns-test-postgres" to its IP
+# Actual: DNS lookup returns "bad address"
+#
+# Date: December 2024
+# Issue: Service discovery broken on custom networks
+# ==============================================================================
+
+services:
+  dns-test-postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    ports:
+      - "15433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - test_network
+
+  dns-test-n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5679:5678"
+    environment:
+      # This is where the DNS failure occurs
+      # n8n tries to connect to "dns-test-postgres" but DNS resolution fails
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: dns-test-postgres  # ❌ This hostname cannot be resolved
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      NODE_ENV: production
+      N8N_LISTEN_ADDRESS: 0.0.0.0
+
+    depends_on:
+      dns-test-postgres:
+        condition: service_healthy
+
+    volumes:
+      - n8n_test_data:/home/node/.n8n
+
+    networks:
+      - test_network
+
+networks:
+  test_network:
+    driver: bridge
+    # Standard custom bridge network
+    # DNS resolution should work here but doesn't
+
+volumes:
+  postgres_test_data:
+    name: docker_dns_test_postgres_data
+  n8n_test_data:
+    name: docker_dns_test_n8n_data
