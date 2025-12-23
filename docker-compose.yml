@@ -32,7 +32,11 @@ services:
       retries: 10
       start_period: 30s
     networks:
-      - test_network
+      test_network:
+        aliases:
+          - postgres
+          - db
+          - database
 
   dns-test-n8n:
     image: n8nio/n8n:latest
@@ -43,7 +47,7 @@ services:
       # This is where the DNS failure occurs
       # n8n tries to connect to "dns-test-postgres" but DNS resolution fails
       DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: dns-test-postgres  # ❌ This hostname cannot be resolved
+      DB_POSTGRESDB_HOST: postgres 
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
       DB_POSTGRESDB_USER: postgres
@@ -64,7 +68,10 @@ services:
       - n8n_test_data:/home/node/.n8n
 
     networks:
-      - test_network
+      test_network:
+        aliases:
+          - n8n
+          - workflow
 
 networks:
   test_network:
