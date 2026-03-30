@@ -1,5 +1,9 @@
 # Docker Desktop DNS Resolution Bug - Reproduction Case
 
+## SOLUTION
+
+I uninstalled Docker Desktop and now just run Docker directly in my Ubuntu 24.04 WSL2 and everything just works.
+
 ## Issue Summary
 
 Docker Desktop (version from December 2024 updates) fails to resolve service hostnames on custom bridge networks, returning "bad address" errors despite services being on the same network.
